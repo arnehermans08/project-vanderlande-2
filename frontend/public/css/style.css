@@ -1,0 +1,374 @@
+body {
+    margin: 0;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background-color: #f4f7fb;
+    color: #1A1A1A;
+    font-size: 13px;
+    scroll-behavior: smooth;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    width: 150px;
+    height: 100%;
+    background-color: #111111;
+    padding-top: 20px;
+    display: flex;
+    flex-direction: column;
+    z-index: 2000;
+}
+
+.sidebar a {
+    padding: 12px 20px;
+    color: #cccccc;
+    text-decoration: none;
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    transition: 0.2s ease;
+    border-left: 3px solid transparent;
+    cursor: pointer;
+}
+
+.sidebar a:hover {
+    color: white;
+    border-left: 3px solid #FA8112;
+    background-color: #222;
+}
+
+/* ===== HEADER ===== */
+.site-header {
+    position: fixed;
+    left: 150px;
+    top: 0;
+    width: calc(100% - 150px);
+    height: 50px;
+    background: #FA8112;
+    color: white;
+    display: flex;
+    align-items: center;
+    padding-left: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    box-sizing: border-box;
+    z-index: 1500;
+}
+
+.site-header #vdllogo {
+    background-color: #fff;;
+    height: 36px;
+    width: 192px;
+    background-image: url('../img/vanderlande-logo.webp');
+    background-position: center center;
+    background-size: 86%;
+    background-repeat: no-repeat;
+    border-radius: 3px;
+    margin-right: 15px;
+    
+}
+
+/* ===== CONTENT AREA ===== */
+.content {
+    margin-left: 150px;
+    padding: 20px;
+    padding-top: 70px;
+    max-width: 1200px;
+}
+
+/* ===== PAGINA'S ===== */
+.page {
+    display: none;
+}
+
+.page.visible {
+    display: block;
+}
+
+/* ===== TITLES ===== */
+h1 {
+    color: #ffffff;
+    font-size: 20px;
+}
+
+h2 {
+    font-size: 16px;
+    margin: 10px 0 10px 0;
+    text-transform: uppercase;
+    color: #FA8112;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+
+/* ===== TABELLEN (realtime data) ===== */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+th {
+    background: #FA8112;
+    color: white;
+    padding: 12px 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+td {
+    padding: 10px 8px;
+    border-bottom: 1px solid #eef2f6;
+    text-align: center;
+}
+
+tr:last-child td {
+    border-bottom: none;
+}
+
+tr:hover {
+    background-color: #f9f9f9;
+}
+
+/* ===== GRAFIEK ===== */
+canvas {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    max-width: 100%;
+    height: auto;
+}
+
+/* ===== TRACK VISUAL ===== */
+.track-container {
+    box-sizing: border-box;
+    position: relative;
+    width: 100%;
+    max-width: 900px;
+    margin: 20px auto 30px auto;
+    padding: 15px;
+    background: #ffffff;
+    border-left: 4px solid #FA8112;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.track {
+    margin-top: 5px;
+    display: flex;
+    width: 100%;
+    height: 60px;
+    border: 2px solid #111111;
+    box-sizing: border-box;
+    position: relative;
+    background: #f5f5f5;
+}
+
+.track-segment {
+    color: white;
+    padding: 8px;
+    text-align: center;
+    background-color: rgb(223, 223, 223);
+    flex: 1;
+    border-right: 2px solid #111111;
+    font-weight: 600;
+    font-size: 15px;
+    box-sizing: border-box;
+    transition: background-color 0.3s ease;
+}
+
+.track-segment .temp {
+    color: white;
+    padding-left: 5px;
+    font-size: 12px;
+}
+
+.track-segment:last-child {
+    border-right: none;
+}
+
+/* ===== KARRETJES ===== */
+.cart {
+    position: relative;
+    width: 8%;
+    min-width: 40px;
+    height: 22px;
+    background: #FA8112;
+    border-radius: 20px;
+    transition: left 0.5s ease, background-color 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Lading in karretje */
+.lading {
+    width: 60%;
+    height: 70%;
+    background: #111111;
+    border-radius: 4px;
+    position: absolute;
+    top: -35%;
+    left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* ===== CONTROLES (grid layout) ===== */
+.controls-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+    margin: 30px 0;
+}
+
+.segment-color-controls,
+.cart-move-controls,
+.cart-color-controls {
+    background: #ffffff;
+    padding: 18px;
+    border-top: 3px solid #FA8112;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    border-radius: 0 0 4px 4px;
+}
+
+.segment-color-controls h3,
+.cart-move-controls h3,
+.cart-color-controls h3 {
+    margin: 0 0 15px 0;
+    font-size: 14px;
+    color: #FA8112;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===== FORM ELEMENTEN ===== */
+label {
+    display: block;
+    margin-top: 10px;
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+}
+
+select {
+    width: 100%;
+    padding: 8px;
+    margin-top: 4px;
+    border: 1px solid #dcdcdc;
+    border-radius: 4px;
+    font-size: 12px;
+    background-color: white;
+    transition: border-color 0.2s;
+}
+
+select:focus {
+    border-color: #FA8112;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(250, 129, 18, 0.1);
+}
+
+button {
+    width: 100%;
+    margin-top: 12px;
+    padding: 8px 12px;
+    border: none;
+    background: #FA8112;
+    color: white;
+    font-weight: 600;
+    font-size: 12px;
+    cursor: pointer;
+    transition: 0.2s ease;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+button:hover {
+    background: #1A1A1A;
+}
+
+/* ===== EXTRA SPACING ===== */
+#bigSpace {
+    height: 40px;
+}
+
+/* ===== LOADING & ERROR STATES ===== */
+#realtime p {
+    padding: 15px;
+    background: white;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+}
+
+#realtime p[style*="red"] {
+    border-left: 3px solid #dc3545;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 120px;
+    }
+
+    .site-header {
+        left: 120px;
+        width: calc(100% - 120px);
+        display: flex;
+    }
+
+    .content {
+        margin-left: 120px;
+    }
+
+    .controls-grid {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+
+    .track-container {
+        max-width: 100%;
+    }
+
+    .cart {
+        min-width: 30px;
+    }
+}
+
+@media (max-width: 480px) {
+    .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 10px;
+    }
+
+    .sidebar a {
+        padding: 8px 12px;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+    }
+
+    .sidebar a:hover {
+        border-left: none;
+        border-bottom: 3px solid #FA8112;
+    }
+
+    .site-header {
+        left: 0;
+        width: 100%;
+        top: auto;
+        position: relative;
+    }
+
+    .content {
+        margin-left: 0;
+        padding-top: 20px;
+    }
+}

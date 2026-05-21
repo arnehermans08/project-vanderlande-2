@@ -1,0 +1,69 @@
+#!/usr/bin/env node
+console.log("🚀 Start API-BE op poort 8080");
+
+const express = require('express');
+const mongoose = require('mongoose');
+const app = express();
+
+app.use(express.json()); // Dit zorgt dat we JSON kunnen lezen
+
+// ===== 1. Maken van een schema (hoe ziet onze data eruit) =====
+const SensorSchema = new mongoose.Schema({
+  id: Number,
+  type: String,
+  waarde: Number,
+  tijd: { type: Date, default: Date.now }
+});
+
+// Dit is de tabel in de database
+const Meting = mongoose.model('Meting', SensorSchema);
+
+// ===== 2. Routes (wat gebeurt er als iemand iets vraagt) =====
+
+// 📥 Als iemand DATA stuurt (POST /data)
+app.post('/data', async (req, res) => {
+  console.log("📥 Nieuwe data binnen:", req.body);
+  
+  try {
+    // Sla op in database
+    const nieuweMeting = new Meting(req.body);
+    await nieuweMeting.save();
+    
+    console.log("✅ Opgeslagen in database");
+    res.send("OK");
+  } catch (fout) {
+    console.log("❌ Fout:", fout);
+    res.status(500).send("Fout bij opslaan");
+  }
+});
+
+// 📤 Als iemand DATA vraagt (GET /data)
+app.get('/data', async (req, res) => {
+  console.log("📤 Data opgevraagd");
+  
+  // Haal laatste 20 metingen op
+  const metingen = await Meting.find()
+    .sort({ tijd: -1 })  // Nieuwste eerst
+    .limit(20);
+  
+  res.json(metingen);
+});
+
+// Check of API werkt
+app.get('/health', (req, res) => {
+  res.send("API-BE leeft! 🎉");
+});
+
+// ===== 3. Starten =====
+mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/dbVdl')
+  .then(() => {
+    console.log("✅ Verbonden met MongoDB");
+    app.listen(8080, () => {
+      console.log("✅ API-BE klaar! Luistert op poort 8080");
+      console.log("   Test met: curl http://localhost:8080/health");
+    });
+  })
+  .catch(fout => {
+    console.log("Kan niet verbinden met MongoDB:", fout);
+  });
+  

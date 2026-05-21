@@ -1,0 +1,76 @@
+#!/usr/bin/env node
+console.log("🚀 Start API-FE op poort 5000");
+
+const express = require('express');
+const axios = require('axios');
+const cors = require('cors');  
+const app = express();
+
+
+app.use(cors());
+
+// ===== Dit is voor de website =====
+
+// Realtime data (voor de tabel)
+app.get('/realtimedata', async (req, res) => {
+  console.log("Website vraagt realtime data");
+
+  try {
+    // Haal data van API-BE
+    const antwoord = await axios.get('http://api-be:8080/data');
+
+    // Stuur door naar website
+    res.json({
+      success: true,
+      data: antwoord.data
+    });
+  } catch (fout) {
+    res.json({
+      success: false,
+      error: "Kan geen data krijgen van database"
+    });
+  }
+});
+
+// Data voor grafiek
+app.get('/grafiekendata', async (req, res) => {
+  console.log("Website vraagt grafiek data");
+
+  try {
+    // Haal data van API-BE
+    const antwoord = await axios.get('http://api-be:8080/data');
+    const metingen = antwoord.data;
+
+    // Maak er een mooie grafiek van
+    const labels = [];
+    const waarden = [];
+
+    for (let m of metingen) {
+      labels.push(new Date(m.tijd).toLocaleTimeString());
+      waarden.push(m.waarde);
+    }
+
+    res.json({
+      labels: labels,
+      datasets: [{
+        label: 'Sensor values',
+        data: waarden,
+        borderColor: 'blue'
+      }]
+    });
+  } catch (fout) {
+    res.json({ labels: [], datasets: [] });
+  }
+});
+
+//  Check of API leeft
+app.get('/health', (req, res) => {
+  res.send("API-FE leeft! 🎉");
+});
+
+// Start de server
+app.listen(5000, () => {
+  console.log("API-FE klaar! Luistert op poort 5000");
+  console.log("   Realtime data: http://localhost:5000/realtimedata");
+  console.log("   Grafiek data: http://localhost:5000/grafiekendata");
+});
