@@ -1,6 +1,6 @@
 services:
   mongodb:
-    image: mongo:4.4.18
+    image: mongo:5.0
     container_name: vanderlande-mongodb
     restart: unless-stopped
     ports:
