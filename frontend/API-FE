@@ -16,7 +16,7 @@ app.get('/realtimedata', async (req, res) => {
   console.log("Website vraagt realtime data");
 
   try {
-    const antwoord = await axios.get('http://api-be:8080/data');
+    const antwoord = await axios.get('http://vanderlande-api-be:8080/data');
     res.json({
       success: true,
       data: antwoord.data
@@ -34,7 +34,7 @@ app.get('/grafiekendata', async (req, res) => {
   console.log("Website vraagt grafiek data");
 
   try {
-    const antwoord = await axios.get('http://api-be:8080/data');
+    const antwoord = await axios.get('http://vanderlande-api-be:8080/data');
     const metingen = antwoord.data;
 
     const labels = [];
@@ -63,7 +63,7 @@ app.get('/grafiekendata', async (req, res) => {
 // Haal alle cart configuraties op
 app.get('/config/carts', async (req, res) => {
   try {
-    const response = await axios.get('http://api-be:8080/config/carts');
+    const response = await axios.get('http://vanderlande-api-be:8080/config/carts');
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -73,7 +73,7 @@ app.get('/config/carts', async (req, res) => {
 // Haal 1 cart configuratie op
 app.get('/config/carts/:cartId', async (req, res) => {
   try {
-    const response = await axios.get(`http://api-be:8080/config/carts/${req.params.cartId}`);
+    const response = await axios.get(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -83,7 +83,7 @@ app.get('/config/carts/:cartId', async (req, res) => {
 // Update of maak cart configuratie
 app.put('/config/carts/:cartId', async (req, res) => {
   try {
-    const response = await axios.put(`http://api-be:8080/config/carts/${req.params.cartId}`, req.body);
+    const response = await axios.put(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`, req.body);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -93,7 +93,7 @@ app.put('/config/carts/:cartId', async (req, res) => {
 // Verwijder cart configuratie
 app.delete('/config/carts/:cartId', async (req, res) => {
   try {
-    const response = await axios.delete(`http://api-be:8080/config/carts/${req.params.cartId}`);
+    const response = await axios.delete(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -103,7 +103,7 @@ app.delete('/config/carts/:cartId', async (req, res) => {
 // Gegroepeerde data per cart
 app.get('/grouped-data', async (req, res) => {
   try {
-    const response = await axios.get('http://api-be:8080/grouped-data');
+    const response = await axios.get('http://vanderlande-api-be:8080/grouped-data');
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });

@@ -1,9 +1,7 @@
-#!/usr/bin/env node
-console.log("🚀 Start API-BE op poort 8080");
-
-// version stability crypto issue in mongodb versions
 const crypto = require('crypto');
-global.crypto = crypto.webcrypto;
+global.crypto = crypto;
+
+console.log("🚀 Start API-BE op poort 8080");
 
 const express = require('express');
 const mongoose = require('mongoose');
@@ -20,7 +18,6 @@ const SensorSchema = new mongoose.Schema({
 });
 
 const Meting = mongoose.model('Meting', SensorSchema);
-const Cart = mongoose.model('Cart', CartSchema)
 
 // ===== 2. Schema voor cart configuratie =====
 const CartConfigSchema = new mongoose.Schema({
@@ -37,10 +34,8 @@ const CartConfig = mongoose.model('CartConfig', CartConfigSchema);
 
 // ===== 3. Routes =====
 
-// POST /data - ontvang sensor data
 app.post('/data', async (req, res) => {
   console.log("📥 Nieuwe data binnen:", req.body);
-  
   try {
     const nieuweMeting = new Meting(req.body);
     await nieuweMeting.save();
@@ -52,14 +47,12 @@ app.post('/data', async (req, res) => {
   }
 });
 
-// GET /data - haal laatste metingen op
 app.get('/data', async (req, res) => {
   console.log("📤 Data opgevraagd");
   const metingen = await Meting.find().sort({ tijd: -1 }).limit(20);
   res.json(metingen);
 });
 
-// GET /config/carts - haal alle cart configuraties op
 app.get('/config/carts', async (req, res) => {
   try {
     const configs = await CartConfig.find();
@@ -69,7 +62,6 @@ app.get('/config/carts', async (req, res) => {
   }
 });
 
-// GET /config/carts/:cartId - haal 1 cart configuratie op
 app.get('/config/carts/:cartId', async (req, res) => {
   try {
     const config = await CartConfig.findOne({ cartId: parseInt(req.params.cartId) });
@@ -82,7 +74,6 @@ app.get('/config/carts/:cartId', async (req, res) => {
   }
 });
 
-// PUT /config/carts/:cartId - update of maak cart configuratie
 app.put('/config/carts/:cartId', async (req, res) => {
   try {
     const cartId = parseInt(req.params.cartId);
@@ -108,7 +99,6 @@ app.put('/config/carts/:cartId', async (req, res) => {
   }
 });
 
-// DELETE /config/carts/:cartId - verwijder cart configuratie
 app.delete('/config/carts/:cartId', async (req, res) => {
   try {
     const cartId = parseInt(req.params.cartId);
@@ -124,7 +114,6 @@ app.delete('/config/carts/:cartId', async (req, res) => {
   }
 });
 
-// GET /grouped-data - haal gegroepeerde data per cart (AUTOMATISCHE LOCATIE DETECTIE)
 app.get('/grouped-data', async (req, res) => {
   try {
     const [configs, metingen] = await Promise.all([
@@ -144,29 +133,23 @@ app.get('/grouped-data', async (req, res) => {
         timestamp: null
       };
 
-      // Filter metingen die bij deze cart horen
       const cartMetingen = metingen.filter(m => config.espIds.includes(m.id));
 
-      // Verwerk alle metingen
       for (const m of cartMetingen) {
         cartData.latestValues[m.type] = m.waarde;
         cartData.timestamp = m.tijd;
       }
 
-      // ZOEK AUTOMATISCH NAAR LOCATIE SENSOR (eindigt op "locatie")
       for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
         if (sensorType.toLowerCase().endsWith('locatie')) {
           cartData.locationValue = waarde;
-          console.log(`📍 API: Locatie sensor voor Cart ${config.cartId}: ${sensorType} = ${waarde}`);
           break;
         }
       }
 
-      // ZOEK AUTOMATISCH NAAR KLEUR SENSOR (als geen colorSensor in config)
       if (config.colorSensor && cartData.latestValues[config.colorSensor] !== undefined) {
         cartData.colorValue = cartData.latestValues[config.colorSensor];
       } else {
-        // Zoek een numerieke sensor die geen locatie is
         for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
           if (!sensorType.toLowerCase().endsWith('locatie') && typeof waarde === 'number') {
             cartData.colorValue = waarde;
@@ -185,7 +168,6 @@ app.get('/grouped-data', async (req, res) => {
   }
 });
 
-// GET /health - health check
 app.get('/health', (req, res) => {
   res.send("API-BE leeft! 🎉");
 });
