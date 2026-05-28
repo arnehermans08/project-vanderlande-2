@@ -8,7 +8,7 @@
 // =======================
 #define ZENDER_ID 1
 #define WIFI_CHANNEL 1
-uint8_t RECEIVER_MAC[] = { 0xA4, 0xF0, 0x0F, 0x8E, 0x67, 0x9C };
+uint8_t RECEIVER_MAC[] = { 0x40, 0x22, 0xD8, 0xFF, 0x7D, 0xF8 };
 
 // Dummy sensoren
 struct Sensor {
