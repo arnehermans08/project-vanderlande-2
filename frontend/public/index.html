@@ -11,7 +11,7 @@
 
 <body>
 
-    <!-- Sidebar - nieuwe menu items -->
+    <!-- Sidebar -->
     <div class="sidebar">
         <a onclick="scrollToSection('home-top')">Home</a>
         <a onclick="scrollToSection('realtime-heading')">Realtime Data</a>
@@ -21,21 +21,29 @@
 
     <!-- Header -->
     <header class="site-header">
-      <div id="vdllogo"></div> <h1>Sensor Dashboard</h1>
+        <div id="vdllogo"></div>
+        <h1>Sensor Dashboard</h1>
     </header>
 
     <!-- Content -->
     <div class="content">
 
-        <!-- HOME PAGINA (geen pagina's meer, gewoon één pagina) -->
+        <!-- HOME PAGINA -->
         <div id="home-page">
-            <!-- Anker voor Home -->
             <div id="home-top"></div>
-            
+
             <h2>Home</h2>
             <p>Welcome to Vanderlande's sensor system!</p>
 
             <br>
+
+            <!-- Dropdown voor cart selectie -->
+            <div style="margin-bottom: 15px; display: flex; align-items: center; gap: 15px;">
+                <label for="cartSelector" style="font-weight: bold;">Selecteer Cart:</label>
+                <select id="cartSelector" style="padding: 8px; border-radius: 4px; border: 1px solid #ddd; background: white;">
+                    <option value="">-- Laden --</option>
+                </select>
+            </div>
 
             <!-- Track container -->
             <div class="track-container" id="homeTrackContainer"></div>
@@ -45,7 +53,7 @@
             <!-- Realtime Data sectie -->
             <h2 id="realtime-heading">Realtime Data</h2>
             <div id="realtime">Loading...</div>
-            
+
             <br><br>
 
             <!-- Grafiek sectie -->
@@ -54,8 +62,45 @@
 
             <br><br>
 
-            <h2 id="config-heading">config</h2>
+            <!-- CONFIGURATIE SECTIE -->
+            <h2 id="config-heading">Configuratie - Carts & ESPs</h2>
 
+            <div style="background: white; padding: 20px; border-radius: 8px; margin-top: 15px;">
+
+                <!-- Knop om nieuwe cart toe te voegen -->
+                <button id="nieuweCartBtn" style="width: auto; background: #28a745; margin-bottom: 20px;">
+                    + Nieuwe Cart toevoegen
+                </button>
+
+                <!-- Lijst van alle carts -->
+                <div id="cartsOverzicht">
+                    <h3>Bestaande Carts</h3>
+                    <div id="cartsList" style="display: flex; flex-direction: column; gap: 15px;">
+                        <!-- Hier komen de carts -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Modal popup voor toevoegen/bewerken -->
+            <div id="cartModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000;">
+                <div style="background: white; max-width: 500px; margin: 100px auto; padding: 25px; border-radius: 8px;">
+                    <h3 id="modalTitle">Cart toevoegen</h3>
+
+                    <label>Cart ID:</label>
+                    <input type="number" id="modalCartId" style="width: 100%; padding: 8px; margin: 5px 0 15px 0; border: 1px solid #ddd; border-radius: 4px;">
+
+                    <label>Selecteer ESPs voor deze cart:</label>
+                    <div id="modalEspCheckboxes" style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 20px 0;">
+                        <!-- Checkboxes voor ESP 1-7 komen hier -->
+                    </div>
+
+                    <div style="display: flex; gap: 10px;">
+                        <button id="modalOpslaanBtn" style="flex: 1;">💾 Opslaan</button>
+                        <button id="modalAnnulerenBtn" style="flex: 1; background: #6c757d;">❌ Annuleren</button>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
@@ -66,4 +111,5 @@
     <script src="/js/app.js"></script>
 
 </body>
+
 </html>

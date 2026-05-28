@@ -5,9 +5,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
 
-app.use(express.json()); // Dit zorgt dat we JSON kunnen lezen
+app.use(express.json());
 
-// ===== 1. Maken van een schema (hoe ziet onze data eruit) =====
+// ===== 1. Schema voor sensor metingen =====
 const SensorSchema = new mongoose.Schema({
   id: Number,
   type: String,
@@ -15,20 +15,30 @@ const SensorSchema = new mongoose.Schema({
   tijd: { type: Date, default: Date.now }
 });
 
-// Dit is de tabel in de database
 const Meting = mongoose.model('Meting', SensorSchema);
 
-// ===== 2. Routes (wat gebeurt er als iemand iets vraagt) =====
+// ===== 2. Schema voor cart configuratie =====
+const CartConfigSchema = new mongoose.Schema({
+  cartId: { type: Number, unique: true, required: true },
+  name: { type: String, default: "Carrier" },
+  espIds: [Number],
+  locationSensor: { type: String, default: "huskylensLocatie" },
+  colorSensor: { type: String, default: "az1" },
+  colorThresholds: [Number],
+  active: { type: Boolean, default: true }
+});
 
-// 📥 Als iemand DATA stuurt (POST /data)
+const CartConfig = mongoose.model('CartConfig', CartConfigSchema);
+
+// ===== 3. Routes =====
+
+// POST /data - ontvang sensor data
 app.post('/data', async (req, res) => {
   console.log("📥 Nieuwe data binnen:", req.body);
   
   try {
-    // Sla op in database
     const nieuweMeting = new Meting(req.body);
     await nieuweMeting.save();
-    
     console.log("✅ Opgeslagen in database");
     res.send("OK");
   } catch (fout) {
@@ -37,25 +47,146 @@ app.post('/data', async (req, res) => {
   }
 });
 
-// 📤 Als iemand DATA vraagt (GET /data)
+// GET /data - haal laatste metingen op
 app.get('/data', async (req, res) => {
   console.log("📤 Data opgevraagd");
-  
-  // Haal laatste 20 metingen op
-  const metingen = await Meting.find()
-    .sort({ tijd: -1 })  // Nieuwste eerst
-    .limit(20);
-  
+  const metingen = await Meting.find().sort({ tijd: -1 }).limit(20);
   res.json(metingen);
 });
 
-// Check of API werkt
+// GET /config/carts - haal alle cart configuraties op
+app.get('/config/carts', async (req, res) => {
+  try {
+    const configs = await CartConfig.find();
+    res.json({ success: true, data: configs });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /config/carts/:cartId - haal 1 cart configuratie op
+app.get('/config/carts/:cartId', async (req, res) => {
+  try {
+    const config = await CartConfig.findOne({ cartId: parseInt(req.params.cartId) });
+    if (!config) {
+      return res.status(404).json({ success: false, error: "Cart not found" });
+    }
+    res.json({ success: true, data: config });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// PUT /config/carts/:cartId - update of maak cart configuratie
+app.put('/config/carts/:cartId', async (req, res) => {
+  try {
+    const cartId = parseInt(req.params.cartId);
+    const { espIds, name, locationSensor, colorSensor, colorThresholds, active } = req.body;
+    
+    const updateData = {};
+    if (espIds !== undefined) updateData.espIds = espIds;
+    if (name !== undefined) updateData.name = name;
+    if (locationSensor !== undefined) updateData.locationSensor = locationSensor;
+    if (colorSensor !== undefined) updateData.colorSensor = colorSensor;
+    if (colorThresholds !== undefined) updateData.colorThresholds = colorThresholds;
+    if (active !== undefined) updateData.active = active;
+    
+    const config = await CartConfig.findOneAndUpdate(
+      { cartId: cartId },
+      { $set: updateData },
+      { upsert: true, new: true }
+    );
+    
+    res.json({ success: true, data: config });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// DELETE /config/carts/:cartId - verwijder cart configuratie
+app.delete('/config/carts/:cartId', async (req, res) => {
+  try {
+    const cartId = parseInt(req.params.cartId);
+    const result = await CartConfig.deleteOne({ cartId: cartId });
+    
+    if (result.deletedCount === 0) {
+      return res.status(404).json({ success: false, error: "Cart not found" });
+    }
+    
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /grouped-data - haal gegroepeerde data per cart (AUTOMATISCHE LOCATIE DETECTIE)
+app.get('/grouped-data', async (req, res) => {
+  try {
+    const [configs, metingen] = await Promise.all([
+      CartConfig.find({ active: true }),
+      Meting.find().sort({ tijd: -1 }).limit(100)
+    ]);
+
+    const result = {};
+
+    for (const config of configs) {
+      const cartData = {
+        cartId: config.cartId,
+        name: config.name,
+        latestValues: {},
+        locationValue: null,
+        colorValue: null,
+        timestamp: null
+      };
+
+      // Filter metingen die bij deze cart horen
+      const cartMetingen = metingen.filter(m => config.espIds.includes(m.id));
+
+      // Verwerk alle metingen
+      for (const m of cartMetingen) {
+        cartData.latestValues[m.type] = m.waarde;
+        cartData.timestamp = m.tijd;
+      }
+
+      // ZOEK AUTOMATISCH NAAR LOCATIE SENSOR (eindigt op "locatie")
+      for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
+        if (sensorType.toLowerCase().endsWith('locatie')) {
+          cartData.locationValue = waarde;
+          console.log(`📍 API: Locatie sensor voor Cart ${config.cartId}: ${sensorType} = ${waarde}`);
+          break;
+        }
+      }
+
+      // ZOEK AUTOMATISCH NAAR KLEUR SENSOR (als geen colorSensor in config)
+      if (config.colorSensor && cartData.latestValues[config.colorSensor] !== undefined) {
+        cartData.colorValue = cartData.latestValues[config.colorSensor];
+      } else {
+        // Zoek een numerieke sensor die geen locatie is
+        for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
+          if (!sensorType.toLowerCase().endsWith('locatie') && typeof waarde === 'number') {
+            cartData.colorValue = waarde;
+            break;
+          }
+        }
+      }
+
+      result[config.cartId] = cartData;
+    }
+
+    res.json({ success: true, data: result });
+  } catch (err) {
+    console.error("❌ Grouped data error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// GET /health - health check
 app.get('/health', (req, res) => {
   res.send("API-BE leeft! 🎉");
 });
 
-// ===== 3. Starten =====
-mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/dbVdl')
+// ===== 4. Starten =====
+mongoose.connect(process.env.MONGO_URI || 'mongodb://mongodb:27017/dbVdl')
   .then(() => {
     console.log("✅ Verbonden met MongoDB");
     app.listen(8080, () => {
@@ -66,4 +197,3 @@ mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/dbVdl')
   .catch(fout => {
     console.log("Kan niet verbinden met MongoDB:", fout);
   });
-  
