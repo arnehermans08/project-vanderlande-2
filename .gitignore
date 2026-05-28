@@ -1,1 +1,8 @@
+# node modules for all directories
 node_modules/
+
+#mogno-data
+mongo/data/
+
+#Node module package.lock file
+**/package-lock.json
