@@ -1,6 +1,15 @@
-[
+// use correct dB
+use dbVdl
+
+// Create DB's
+
+db.createCollection('metings')
+db.createCollection('carts')
+
+// sample data metings
+
+db.metings.insertMany([
   {
-    _id: ObjectId('69fb266389010d71a9e121b8'),
     id: 1,
     type: 'az1',
     waarde: 62,
@@ -8,7 +17,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266689010d71a9e121ba'),
     id: 1,
     type: 'ax1',
     waarde: 41,
@@ -16,7 +24,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266689010d71a9e121bc'),
     id: 1,
     type: 'ay1',
     waarde: 92,
@@ -24,7 +31,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266689010d71a9e121be'),
     id: 1,
     type: 'az1',
     waarde: 68,
@@ -32,7 +38,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266989010d71a9e121c0'),
     id: 1,
     type: 'ax1',
     waarde: 72,
@@ -40,7 +45,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266989010d71a9e121c2'),
     id: 1,
     type: 'ay1',
     waarde: 69,
@@ -48,7 +52,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266a89010d71a9e121c4'),
     id: 1,
     type: 'az1',
     waarde: 63,
@@ -56,7 +59,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266d89010d71a9e121c6'),
     id: 1,
     type: 'ax1',
     waarde: 2,
@@ -64,7 +66,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266d89010d71a9e121c8'),
     id: 1,
     type: 'ay1',
     waarde: 56,
@@ -72,7 +73,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb266d89010d71a9e121ca'),
     id: 1,
     type: 'az1',
     waarde: 0,
@@ -80,7 +80,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267089010d71a9e121cc'),
     id: 1,
     type: 'ax1',
     waarde: 48,
@@ -88,7 +87,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267189010d71a9e121ce'),
     id: 1,
     type: 'ay1',
     waarde: 10,
@@ -96,7 +94,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267189010d71a9e121d0'),
     id: 1,
     type: 'az1',
     waarde: 80,
@@ -104,7 +101,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267489010d71a9e121d2'),
     id: 1,
     type: 'ax1',
     waarde: 7,
@@ -112,7 +108,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267489010d71a9e121d4'),
     id: 1,
     type: 'ay1',
     waarde: 43,
@@ -120,7 +115,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267489010d71a9e121d6'),
     id: 1,
     type: 'az1',
     waarde: 35,
@@ -128,7 +122,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267889010d71a9e121d8'),
     id: 1,
     type: 'ax1',
     waarde: 61,
@@ -136,7 +129,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267889010d71a9e121da'),
     id: 1,
     type: 'ay1',
     waarde: 99,
@@ -144,7 +136,6 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267889010d71a9e121dc'),
     id: 1,
     type: 'az1',
     waarde: 19,
@@ -152,26 +143,26 @@
     __v: 0
   },
   {
-    _id: ObjectId('69fb267b89010d71a9e121de'),
     id: 1,
     type: 'ax1',
     waarde: 31,
     tijd: ISODate('2026-05-06T11:31:07.713Z'),
     __v: 0
   }
-]
+])
 
 
+// sample data carts
 
 
-
-
-
-[
+db.carts.insertMany([
   {
-    _id: ObjectId('6a1586a68caa46c1f59df8a3'),
     cartID: 1,
     sensoren: [ 1, 2, 3, 4 ]
+  },
+  {
+    cartID: 2,
+    sensoren: [ 5, 6, 7, 8 ]
   }
-]
+])
 

@@ -63,6 +63,27 @@ app.get('/grafiekendata', async (req, res) => {
   }
 });
 
+// Realtime data (voor de tabel)
+app.get('/cartData', async (req, res) => {
+  console.log("Website vraagt realtime data");
+
+  try {
+    // Haal  cart data van API-BE
+    const antwoord = await axios.get('http://api-be:8080/carts');
+
+    // Stuur door naar website
+    res.json({
+      success: true,
+      data: antwoord.data
+    });
+  } catch (fout) {
+    res.json({
+      success: false,
+      error: "Kan geen data krijgen van database"
+    });
+  }
+});
+
 //  Check of API leeft
 app.get('/health', (req, res) => {
   res.send("API-FE leeft! 🎉");

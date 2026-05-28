@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 console.log("🚀 Start API-BE op poort 8080");
 
+// version stability crypto issue in mongodb versions
+const crypto = require('crypto');
+global.crypto = crypto.webcrypto;
+
 const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
@@ -15,8 +19,14 @@ const SensorSchema = new mongoose.Schema({
   tijd: { type: Date, default: Date.now }
 });
 
+const CartSchema = new mongoose.Schema({
+  cartID: Number,
+  sensoren: Array
+})
+
 // Dit is de tabel in de database
 const Meting = mongoose.model('Meting', SensorSchema);
+const Cart = mongoose.model('Cart', CartSchema)
 
 // ===== 2. Routes (wat gebeurt er als iemand iets vraagt) =====
 
@@ -47,6 +57,14 @@ app.get('/data', async (req, res) => {
     .limit(20);
   
   res.json(metingen);
+});
+
+// Get Carts data
+app.get('/carts', async (req, res) => {
+  
+  const carts = await Cart.find();
+  
+  res.json(carts);
 });
 
 // Check of API werkt
