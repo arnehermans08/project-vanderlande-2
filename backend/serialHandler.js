@@ -1,25 +1,25 @@
 console.log("🚀 SerialHandler gestart");
 console.log("📡 Wachten op data van ESP...");
 
-const { SerialPort } = require('serialport');
-const { ReadlineParser } = require('@serialport/parser-readline');
-const axios = require('axios');
+let { SerialPort } = require('serialport');
+let { ReadlineParser } = require('@serialport/parser-readline');
+let axios = require('axios');
 
 // Maak verbinding met de ESP32 via USB
 // path: de COM-poort waarop de ESP aangesloten is
 // baudRate: moet overeenkomen met Serial.begin() in de Arduino code
-const poort = new SerialPort({
+let poort = new SerialPort({
   path: 'COM8',
   baudRate: 115200
 });
 
 // Splits de binnenkomende data op per regel (\n)
 // Elke nieuwe regel = 1 JSON bericht van de ESP
-const parser = poort.pipe(new ReadlineParser({ delimiter: '\n' }));
+let parser = poort.pipe(new ReadlineParser({ delimiter: '\n' }));
 
 // Wordt uitgevoerd elke keer er een nieuwe regel binnenkomt
 parser.on('data', async (regel) => {
-  const data = regel.trim(); // verwijder spaties en enters rondom de tekst
+  let data = regel.trim(); // verwijder spaties en enters rondom de tekst
   if (data) {
     console.log("📥 Van ESP:", data);
 
@@ -35,7 +35,7 @@ parser.on('data', async (regel) => {
 
     // Probeer de waarde om te zetten naar een getal
     // Als het geen getal is (bv. "0001.02.01.M11"), blijft het een string
-    const alsGetal = Number(parsed.waarde);
+    let alsGetal = Number(parsed.waarde);
     if (!isNaN(alsGetal)) parsed.waarde = alsGetal;
 
     // Stuur het object door naar de API-BE die het opslaat in de database

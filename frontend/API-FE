@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 console.log("🚀 Start API-FE op poort 5000");
 
-const express = require('express');
-const axios = require('axios');
-const cors = require('cors');  
-const app = express();
+let express = require('express');
+let axios = require('axios');
+let cors = require('cors');
+let app = express();
 
 app.use(cors());
 app.use(express.json());
@@ -16,7 +16,7 @@ app.get('/realtimedata', async (req, res) => {
   console.log("Website vraagt realtime data");
 
   try {
-    const antwoord = await axios.get('http://vanderlande-api-be:8080/data');
+    let antwoord = await axios.get('http://vanderlande-api-be:8080/data');
     res.json({
       success: true,
       data: antwoord.data
@@ -34,11 +34,11 @@ app.get('/grafiekendata', async (req, res) => {
   console.log("Website vraagt grafiek data");
 
   try {
-    const antwoord = await axios.get('http://vanderlande-api-be:8080/data');
-    const metingen = antwoord.data;
+    let antwoord = await axios.get('http://vanderlande-api-be:8080/data');
+    let metingen = antwoord.data;
 
-    const labels = [];
-    const waarden = [];
+    let labels = [];
+    let waarden = [];
 
     for (let m of metingen) {
       labels.push(new Date(m.tijd).toLocaleTimeString());
@@ -63,7 +63,7 @@ app.get('/grafiekendata', async (req, res) => {
 // Haal alle cart configuraties op
 app.get('/config/carts', async (req, res) => {
   try {
-    const response = await axios.get('http://vanderlande-api-be:8080/config/carts');
+    let response = await axios.get('http://vanderlande-api-be:8080/config/carts');
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -73,7 +73,7 @@ app.get('/config/carts', async (req, res) => {
 // Haal 1 cart configuratie op
 app.get('/config/carts/:cartId', async (req, res) => {
   try {
-    const response = await axios.get(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`);
+    let response = await axios.get(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -83,7 +83,7 @@ app.get('/config/carts/:cartId', async (req, res) => {
 // Update of maak cart configuratie
 app.put('/config/carts/:cartId', async (req, res) => {
   try {
-    const response = await axios.put(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`, req.body);
+    let response = await axios.put(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`, req.body);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -93,7 +93,7 @@ app.put('/config/carts/:cartId', async (req, res) => {
 // Verwijder cart configuratie
 app.delete('/config/carts/:cartId', async (req, res) => {
   try {
-    const response = await axios.delete(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`);
+    let response = await axios.delete(`http://vanderlande-api-be:8080/config/carts/${req.params.cartId}`);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -103,7 +103,60 @@ app.delete('/config/carts/:cartId', async (req, res) => {
 // Gegroepeerde data per cart
 app.get('/grouped-data', async (req, res) => {
   try {
-    const response = await axios.get('http://vanderlande-api-be:8080/grouped-data');
+    let response = await axios.get('http://vanderlande-api-be:8080/grouped-data');
+    res.json(response.data);
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// Haal alle beschikbare sensoren op (unieke combinaties van ESP ID + sensor type)
+app.get('/available-sensors', async (req, res) => {
+  try {
+    let antwoord = await axios.get('http://vanderlande-api-be:8080/data');
+    let metingen = antwoord.data;
+
+    // Verzamel unieke combinaties van id en type
+    let uniekeSensoren = new Map();
+    for (let m of metingen) {
+      let key = `${m.id}|${m.type}`;
+      if (!uniekeSensoren.has(key)) {
+        uniekeSensoren.set(key, { id: m.id, type: m.type });
+      }
+    }
+
+    let sensorList = Array.from(uniekeSensoren.values());
+    console.log(`📊 ${sensorList.length} unieke sensoren gevonden`);
+    res.json({ success: true, data: sensorList });
+  } catch (fout) {
+    console.error("❌ Fout bij available-sensors:", fout.message);
+    res.status(500).json({ success: false, error: fout.message });
+  }
+});
+
+// Haal specifieke sensor data op voor grafiek (laatste 20 metingen)
+app.get('/sensor-data/:espId/:sensorType', async (req, res) => {
+  try {
+    let { espId, sensorType } = req.params;
+    console.log(`📊 Grafiek request: ESP${espId} - ${sensorType}`);
+
+    let response = await axios.get(`http://vanderlande-api-be:8080/sensor-data/${espId}/${sensorType}`);
+
+    console.log(`✅ ${response.data.data.length} metingen gevonden voor ESP${espId} - ${sensorType}`);
+    res.json(response.data);
+  } catch (err) {
+    console.error("❌ Fout bij sensor-data:", err.message);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+
+// Haal specifieke sensor data op voor grafiek (laatste 20 metingen)
+app.get('/sensor-data/:espId/:sensorType', async (req, res) => {
+  try {
+    let { espId, sensorType } = req.params;
+    let response = await axios.get(`http://vanderlande-api-be:8080/sensor-data/${espId}/${sensorType}`);
     res.json(response.data);
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
