@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 console.log("🚀 Start API-BE op poort 8080");
 
+// version stability crypto issue in mongodb versions
+const crypto = require('crypto');
+global.crypto = crypto.webcrypto;
+
 const express = require('express');
 const mongoose = require('mongoose');
 const app = express();
@@ -16,6 +20,7 @@ const SensorSchema = new mongoose.Schema({
 });
 
 const Meting = mongoose.model('Meting', SensorSchema);
+const Cart = mongoose.model('Cart', CartSchema)
 
 // ===== 2. Schema voor cart configuratie =====
 const CartConfigSchema = new mongoose.Schema({
