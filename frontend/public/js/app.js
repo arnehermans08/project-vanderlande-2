@@ -1,9 +1,9 @@
 console.log("📱 Website geladen met Track Visual!");
 
-const API_URL = 'http://localHost:5000';
+let API_URL = 'http://localHost:5000';
 
 // ===========================================
-// KARRETJE VERPLAATSEN (originele CSS stijl)
+// KARRETJE VERPLAATSEN (flexibel voor elk aantal segmenten)
 // ===========================================
 function moveCartTo(cartId, segmentNumber) {
     let cart = document.getElementById(cartId.toString());
@@ -20,15 +20,17 @@ function moveCartTo(cartId, segmentNumber) {
     }
 
     let segments = track.children.length;
-    let segmentWidth = trackWidth / segments;
     let cartWidth = cart.offsetWidth;
 
-    // Originele formule die werkte
-    let left = 12.5 + (25 * (segmentNumber - 1)) - 4;
-    cart.style.left = `${left}%`;
+    let segmentWidth = trackWidth / segments;
+    let leftPosition = (segmentNumber - 1) * segmentWidth;
+    leftPosition = leftPosition + (segmentWidth / 2) - (cartWidth / 2);
+    let leftPercentage = (leftPosition / trackWidth) * 100;
+
+    cart.style.left = `${leftPercentage}%`;
     cart.dataset.segment = segmentNumber;
 
-    console.log(`karretje ${cartId} naar segment ${segmentNumber} (left: ${left}%)`);
+    console.log(`karretje ${cartId} naar segment ${segmentNumber} (${segments} segmenten, left: ${leftPercentage.toFixed(1)}%)`);
 }
 
 // ===========================================
@@ -45,29 +47,28 @@ function setSegmentColor(segmentNumber, color) {
 // DROPDOWN FUNCTIES - CART SELECTOR
 // ===========================================
 
-// Vul de dropdown met alle beschikbare carts
 async function vulCartSelector() {
-    const selector = document.getElementById('cartSelector');
+    let selector = document.getElementById('cartSelector');
     if (!selector) return;
-    
+
     try {
-        const response = await fetch(API_URL + '/config/carts');
-        const result = await response.json();
-        
+        let response = await fetch(API_URL + '/config/carts');
+        let result = await response.json();
+
         if (result.success && result.data.length > 0) {
             selector.innerHTML = '';
-            
-            for (const cart of result.data) {
-                const option = document.createElement('option');
+
+            for (let cart of result.data) {
+                let option = document.createElement('option');
                 option.value = cart.cartId;
                 option.textContent = `Cart ${cart.cartId} (ESPs: ${cart.espIds.join(', ')})`;
                 selector.appendChild(option);
             }
-            
+
             if (trackConfig.currentCart) {
                 selector.value = trackConfig.currentCart.cartId;
             }
-            
+
             selector.disabled = false;
             console.log("✅ Dropdown gevuld met", result.data.length, "carts");
         } else {
@@ -80,21 +81,17 @@ async function vulCartSelector() {
     }
 }
 
-// Wissel van cart
 async function switchCart(cartId) {
     console.log(`🔄 Wisselen naar Cart ${cartId}`);
-    
-    const carts = await fetchCarts();
-    const nieuweCart = carts.find(c => c.cartId === parseInt(cartId));
-    
+
+    let carts = await fetchCarts();
+    let nieuweCart = carts.find(c => c.cartId === parseInt(cartId));
+
     if (nieuweCart) {
         trackConfig.currentCart = nieuweCart;
         console.log("✅ Huidige cart is nu:", trackConfig.currentCart);
-        
-        // Reset de track
+
         createTrack();
-        
-        // Haal direct nieuwe data op
         await haalData();
     } else {
         console.error("❌ Cart niet gevonden:", cartId);
@@ -102,92 +99,75 @@ async function switchCart(cartId) {
 }
 
 // ===========================================
-// DATA VERWERKEN - DIRECT UIT LATESTVALUES (omzeilt API locationValue)
+// DATA VERWERKEN - Vereenvoudigd voor 2 segmenten
 // ===========================================
+let laatsteLocatiePerCart = {};
+
 async function haalData() {
     if (!trackConfig.currentCart) {
         console.log("⚠️ Geen cart geselecteerd");
         return;
     }
-    
+
     try {
-        const response = await fetch(API_URL + '/grouped-data');
-        const result = await response.json();
-        
+        let response = await fetch(API_URL + '/grouped-data');
+        let result = await response.json();
+
         if (!result.success || !result.data) {
             console.error("Geen data");
             return;
         }
-        
-        const cartData = result.data[trackConfig.currentCart.cartId];
+
+        let cartData = result.data[trackConfig.currentCart.cartId];
         if (!cartData) {
             console.log("Geen data voor cart", trackConfig.currentCart.cartId);
             return;
         }
-        
+
         console.log("Cart data:", cartData);
-        
-        // Toon alle metingen in tabel
+
         toonData(cartData.latestValues);
-        
-        // ===== DIRECT UIT LATESTVALUES HALEN (omzeilt API) =====
+
         let locatie = null;
-        
-        // Zoek in latestValues naar sensor die eindigt op "locatie"
+
         for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
-            if (sensorType.toLowerCase().endsWith('locatie')) {
-                // Converteer op basis van sensor type
-                if (sensorType.toLowerCase() === 'huskylenslocatie') {
-                    locatie = convertHuskylensToSegment(waarde);
-                    console.log(`📍 Huskylens locatie: ${sensorType} = ${waarde} → segment ${locatie}`);
-                } else {
-                    locatie = convertNfcToSegment(waarde);
-                    console.log(`📍 NFC/RFID locatie: ${sensorType} = ${waarde} → segment ${locatie}`);
-                }
+            if (isLocationSensor(sensorType)) {
+                locatie = convertLocationToSegment(waarde);
+                console.log(`📍 Locatie sensor: ${sensorType} = ${waarde} → segment ${locatie}`);
                 break;
             }
         }
-        
-        // Als geen locatie sensor gevonden, gebruik dan de locationValue van API
+
         if (locatie === null && cartData.locationValue !== null) {
-            console.log("⚠️ Geen locatie sensor in latestValues, gebruik API locationValue:", cartData.locationValue);
-            locatie = convertNfcToSegment(cartData.locationValue);
+            locatie = convertLocationToSegment(cartData.locationValue);
+            console.log(`📍 Backup locationValue = ${cartData.locationValue} → segment ${locatie}`);
         }
-        
-        // Verplaats karretje
+
         if (locatie !== null && locatie >= 1 && locatie <= trackConfig.segmentCount) {
-            moveCartTo(trackConfig.currentCart.cartId, locatie);
-            console.log(`✅ Karretje bewogen naar segment ${locatie}`);
-        } else {
-            console.log("⚠️ Geen geldige locatie:", locatie);
-        }
-        
-        // Bepaal kleur
-        let kleurWaarde = null;
-        
-        // Zoek eerst naar colorSensor uit config
-        if (trackConfig.currentCart.colorSensor) {
-            kleurWaarde = cartData.latestValues[trackConfig.currentCart.colorSensor];
-        }
-        
-        // Zoek anders automatisch een numerieke sensor
-        if (kleurWaarde === undefined) {
-            for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
-                if (!sensorType.toLowerCase().endsWith('locatie') && typeof waarde === 'number') {
-                    kleurWaarde = waarde;
-                    console.log(`🎨 Automatische kleur sensor: ${sensorType} = ${kleurWaarde}`);
-                    break;
-                }
+            if (laatsteLocatiePerCart[trackConfig.currentCart.cartId] !== locatie) {
+                console.log(`🔄 Locatie veranderd naar segment ${locatie}`);
+                moveCartTo(trackConfig.currentCart.cartId, locatie);
+                laatsteLocatiePerCart[trackConfig.currentCart.cartId] = locatie;
             }
         }
-        
-        if (kleurWaarde !== undefined && locatie !== null) {
-            const thresholds = trackConfig.currentCart.colorThresholds || [10, 30, 50];
-            const kleur = getColorFromThreshold(kleurWaarde, thresholds);
-            setSegmentColor(locatie, kleur);
-            console.log(`🎨 Kleur voor segment ${locatie}: ${kleur} (waarde=${kleurWaarde})`);
+
+        let kleurWaarde = null;
+
+        for (let [sensorType, waarde] of Object.entries(cartData.latestValues)) {
+            if (!isLocationSensor(sensorType) && typeof waarde === 'number') {
+                kleurWaarde = waarde;
+                console.log(`🎨 Kleur sensor: ${sensorType} = ${kleurWaarde}`);
+                break;
+            }
         }
-        
+
+        if (kleurWaarde !== null && locatie !== null) {
+            let thresholds = trackConfig.currentCart?.colorThresholds || [10, 30, 50];
+            let kleur = getColorFromThreshold(kleurWaarde, thresholds);
+            setSegmentColor(locatie, kleur);
+            console.log(`🎨 Kleur voor segment ${locatie}: ${kleur}`);
+        }
+
     } catch (fout) {
         console.error("Fout bij ophalen data:", fout);
         document.getElementById('realtime').innerHTML = '<p style="color:red">Kan niet verbinden met API</p>';
@@ -199,19 +179,19 @@ async function haalData() {
 // ===========================================
 function toonData(sensorValues) {
     let html = '<table><tr><th>Sensor Type</th><th>Waarde</th></tr>';
-    
+
     for (let [type, waarde] of Object.entries(sensorValues)) {
         html += `<tr>
         <td>${type}</td>
         <td>${waarde}</td>
         </tr>`;
     }
-    
+
     document.getElementById('realtime').innerHTML = html;
 }
 
 // ===========================================
-// TRACK AANMAKEN (originele stijl)
+// TRACK AANMAKEN
 // ===========================================
 function createTrack() {
     let container = document.getElementById('homeTrackContainer');
@@ -224,7 +204,6 @@ function createTrack() {
         return;
     }
 
-    // Maak karretje eerst
     let cart = document.createElement('div');
     cart.className = 'cart';
     cart.id = trackConfig.currentCart.cartId.toString();
@@ -234,12 +213,10 @@ function createTrack() {
     lading.className = 'lading';
     cart.appendChild(lading);
 
-    // Maak track
     let track = document.createElement('div');
     track.className = 'track';
     container.appendChild(track);
 
-    // Maak segmenten
     for (let i = 1; i <= trackConfig.segmentCount; i++) {
         let segment = document.createElement('div');
         segment.className = 'track-segment';
@@ -254,24 +231,164 @@ function createTrack() {
 }
 
 // ===========================================
-// GRAFIEK
+// GRAFIEK - SENSOR SELECTIE (VERBETERD)
 // ===========================================
-async function maakGrafiek() {
-    try {
-        const response = await fetch(API_URL + '/grafiekendata');
-        const data = await response.json();
 
-        if (data.labels && data.labels.length > 0) {
-            const ctx = document.getElementById('grafiek').getContext('2d');
-            new Chart(ctx, {
-                type: 'line',
-                data: data,
-                options: { responsive: true }
+let grafiek = null;
+
+// Vul de dropdown met beschikbare sensoren
+async function vulSensorDropdown() {
+    let selector = document.getElementById('sensorSelect');
+    if (!selector) return;
+
+    try {
+        let response = await fetch(API_URL + '/available-sensors');
+        let result = await response.json();
+
+        if (result.success && result.data.length > 0) {
+            selector.innerHTML = '<option value="">-- Selecteer een sensor --</option>';
+
+            // Sorteer op ESP ID en dan sensor type
+            let sortedSensors = result.data.sort((a, b) => {
+                if (a.id !== b.id) return a.id - b.id;
+                return a.type.localeCompare(b.type);
             });
+
+            for (let sensor of sortedSensors) {
+                let option = document.createElement('option');
+                option.value = `${sensor.id}|${sensor.type}`;
+                option.textContent = `ESP${sensor.id} - ${sensor.type}`;
+                selector.appendChild(option);
+            }
+
+            selector.disabled = false;
+            console.log("✅ Dropdown gevuld met", result.data.length, "sensoren");
+        } else {
+            selector.innerHTML = '<option value="">Geen sensoren gevonden</option>';
+            selector.disabled = true;
         }
-    } catch (fout) {
-        console.log("Grafiek fout:", fout);
+    } catch (err) {
+        console.error("❌ Dropdown vullen mislukt:", err);
+        selector.innerHTML = '<option value="">Fout bij laden</option>';
     }
+}
+
+// Grafiek updaten op basis van geselecteerde sensor
+async function updateGrafiek(espId, sensorType) {
+    try {
+        let response = await fetch(`${API_URL}/sensor-data/${espId}/${sensorType}`);
+        let result = await response.json();
+
+        if (result.success && result.data.length > 0) {
+            let metingen = result.data;
+
+            let labels = metingen.map(m => {
+                let date = new Date(m.tijd);
+                return date.toLocaleTimeString();
+            });
+            let waarden = metingen.map(m => m.waarde);
+
+            if (grafiek) {
+                grafiek.destroy();
+            }
+
+            let ctx = document.getElementById('grafiek').getContext('2d');
+            grafiek = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `ESP${espId} - ${sensorType}`,
+                        data: waarden,
+                        borderColor: '#FA8112',
+                        backgroundColor: 'rgba(250, 129, 18, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function (context) {
+                                    return `${context.dataset.label}: ${context.raw}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Waarde'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Tijd'
+                            }
+                        }
+                    }
+                }
+            });
+            console.log(`✅ Grafiek bijgewerkt: ESP${espId} - ${sensorType} (${metingen.length} metingen)`);
+        } else {
+            console.log("⚠️ Geen data voor deze sensor");
+            if (grafiek) {
+                grafiek.destroy();
+                grafiek = null;
+            }
+            let ctx = document.getElementById('grafiek').getContext('2d');
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+            ctx.font = '16px Arial';
+            ctx.fillStyle = '#999';
+            ctx.textAlign = 'center';
+            ctx.fillText('Geen data beschikbaar voor deze sensor', ctx.canvas.width / 2, ctx.canvas.height / 2);
+        }
+    } catch (err) {
+        console.error("❌ Grafiek update mislukt:", err);
+        let ctx = document.getElementById('grafiek').getContext('2d');
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        ctx.font = '16px Arial';
+        ctx.fillStyle = 'red';
+        ctx.textAlign = 'center';
+        ctx.fillText('Fout bij laden van data', ctx.canvas.width / 2, ctx.canvas.height / 2);
+    }
+}
+
+// Event listener voor dropdown
+function initGrafiekSelector() {
+    let selector = document.getElementById('sensorSelect');
+    if (!selector) return;
+
+    selector.addEventListener('change', async (e) => {
+        let value = e.target.value;
+        if (value && value !== '') {
+            let [espId, sensorType] = value.split('|');
+            await updateGrafiek(parseInt(espId), sensorType);
+        } else {
+            if (grafiek) {
+                grafiek.destroy();
+                grafiek = null;
+            }
+            let ctx = document.getElementById('grafiek').getContext('2d');
+            ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        }
+    });
+}
+
+// Initialiseer grafiek
+async function initGrafiek() {
+    await vulSensorDropdown();
+    initGrafiekSelector();
 }
 
 // ===========================================
@@ -279,26 +396,26 @@ async function maakGrafiek() {
 // ===========================================
 
 async function toonCartsOverzicht() {
-    const container = document.getElementById('cartsList');
+    let container = document.getElementById('cartsList');
     if (!container) return;
-    
-    const carts = await fetchCarts();
-    
+
+    let carts = await fetchCarts();
+
     if (carts.length === 0) {
         container.innerHTML = '<p style="color: #999; text-align: center;">Geen carts gevonden. Klik op "+ Nieuwe Cart" om er een toe te voegen.</p>';
         return;
     }
-    
+
     container.innerHTML = '';
-    
-    for (const cart of carts) {
-        const cartCard = document.createElement('div');
+
+    for (let cart of carts) {
+        let cartCard = document.createElement('div');
         cartCard.style.cssText = 'border: 1px solid #ddd; border-radius: 8px; padding: 15px; background: #fafafa;';
-        
-        const espBadges = cart.espIds.map(id => 
+
+        let espBadges = cart.espIds.map(id =>
             `<span style="display: inline-block; background: #FA8112; color: white; padding: 4px 10px; border-radius: 20px; margin: 0 5px 5px 0; font-size: 12px;">ESP ${id}</span>`
         ).join('');
-        
+
         cartCard.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -313,14 +430,14 @@ async function toonCartsOverzicht() {
                 </div>
             </div>
         `;
-        
+
         container.appendChild(cartCard);
     }
-    
+
     document.querySelectorAll('.editCartBtn').forEach(btn => {
         btn.addEventListener('click', () => openModal(parseInt(btn.dataset.cartid)));
     });
-    
+
     document.querySelectorAll('.deleteCartBtn').forEach(btn => {
         btn.addEventListener('click', () => deleteCartConfirm(parseInt(btn.dataset.cartid)));
     });
@@ -328,7 +445,7 @@ async function toonCartsOverzicht() {
 
 async function saveCart(cartId, espIds) {
     try {
-        const response = await fetch(`http://localhost:5000/config/carts/${cartId}`, {
+        let response = await fetch(`http://localhost:5000/config/carts/${cartId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -341,7 +458,7 @@ async function saveCart(cartId, espIds) {
                 colorThresholds: [10, 30, 50]
             })
         });
-        const result = await response.json();
+        let result = await response.json();
         return result.success;
     } catch (err) {
         console.error("Fout bij opslaan:", err);
@@ -351,10 +468,10 @@ async function saveCart(cartId, espIds) {
 
 async function deleteCart(cartId) {
     try {
-        const response = await fetch(`http://localhost:5000/config/carts/${cartId}`, {
+        let response = await fetch(`http://localhost:5000/config/carts/${cartId}`, {
             method: 'DELETE'
         });
-        const result = await response.json();
+        let result = await response.json();
         return result.success;
     } catch (err) {
         console.error("Fout bij verwijderen:", err);
@@ -364,19 +481,19 @@ async function deleteCart(cartId) {
 
 function maakCheckboxes(container, geselecteerdeIds) {
     container.innerHTML = '';
-    
+
     for (let i = 1; i <= 7; i++) {
-        const label = document.createElement('label');
+        let label = document.createElement('label');
         label.style.cssText = 'display: flex; align-items: center; gap: 5px; cursor: pointer; min-width: 70px;';
-        
-        const checkbox = document.createElement('input');
+
+        let checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.value = i;
         checkbox.checked = geselecteerdeIds.includes(i);
-        
-        const span = document.createElement('span');
+
+        let span = document.createElement('span');
         span.textContent = `ESP ${i}`;
-        
+
         label.appendChild(checkbox);
         label.appendChild(span);
         container.appendChild(label);
@@ -386,21 +503,21 @@ function maakCheckboxes(container, geselecteerdeIds) {
 let huidigeEditCartId = null;
 
 async function openModal(cartId = null) {
-    const modal = document.getElementById('cartModal');
-    const modalTitle = document.getElementById('modalTitle');
-    const cartIdInput = document.getElementById('modalCartId');
-    const espContainer = document.getElementById('modalEspCheckboxes');
-    
+    let modal = document.getElementById('cartModal');
+    let modalTitle = document.getElementById('modalTitle');
+    let cartIdInput = document.getElementById('modalCartId');
+    let espContainer = document.getElementById('modalEspCheckboxes');
+
     huidigeEditCartId = cartId;
-    
+
     if (cartId) {
         modalTitle.textContent = `✏️ Cart ${cartId} bewerken`;
         cartIdInput.value = cartId;
         cartIdInput.disabled = true;
-        
-        const carts = await fetchCarts();
-        const cart = carts.find(c => c.cartId === cartId);
-        const geselecteerdeESPids = cart ? cart.espIds : [];
+
+        let carts = await fetchCarts();
+        let cart = carts.find(c => c.cartId === cartId);
+        let geselecteerdeESPids = cart ? cart.espIds : [];
         maakCheckboxes(espContainer, geselecteerdeESPids);
     } else {
         modalTitle.textContent = '➕ Nieuwe Cart toevoegen';
@@ -408,34 +525,34 @@ async function openModal(cartId = null) {
         cartIdInput.disabled = false;
         maakCheckboxes(espContainer, []);
     }
-    
+
     modal.style.display = 'block';
 }
 
 async function opslaanUitModal() {
-    const cartIdInput = document.getElementById('modalCartId');
-    const espContainer = document.getElementById('modalEspCheckboxes');
-    
-    const cartId = parseInt(cartIdInput.value);
-    
+    let cartIdInput = document.getElementById('modalCartId');
+    let espContainer = document.getElementById('modalEspCheckboxes');
+
+    let cartId = parseInt(cartIdInput.value);
+
     if (isNaN(cartId) || cartId < 1) {
         alert('Voer een geldig Cart ID in (getal groter dan 0)');
         return;
     }
-    
-    const geselecteerdeESPids = [];
-    const checkboxes = espContainer.querySelectorAll('input[type="checkbox"]');
+
+    let geselecteerdeESPids = [];
+    let checkboxes = espContainer.querySelectorAll('input[type="checkbox"]');
     checkboxes.forEach(cb => {
         if (cb.checked) geselecteerdeESPids.push(parseInt(cb.value));
     });
-    
+
     if (geselecteerdeESPids.length === 0) {
         alert('Selecteer minstens 1 ESP voor deze cart');
         return;
     }
-    
-    const success = await saveCart(cartId, geselecteerdeESPids);
-    
+
+    let success = await saveCart(cartId, geselecteerdeESPids);
+
     if (success) {
         alert(`✅ Cart ${cartId} opgeslagen met ESPs: ${geselecteerdeESPids.map(id => `ESP ${id}`).join(', ')}`);
         sluitModal();
@@ -450,7 +567,7 @@ async function opslaanUitModal() {
 
 async function deleteCartConfirm(cartId) {
     if (confirm(`Weet je zeker dat je Cart ${cartId} wilt verwijderen?`)) {
-        const success = await deleteCart(cartId);
+        let success = await deleteCart(cartId);
         if (success) {
             alert(`✅ Cart ${cartId} verwijderd`);
             toonCartsOverzicht();
@@ -470,20 +587,20 @@ function sluitModal() {
 
 function initConfigPagina() {
     if (!document.getElementById('cartsList')) return;
-    
+
     toonCartsOverzicht();
-    
-    const nieuweBtn = document.getElementById('nieuweCartBtn');
+
+    let nieuweBtn = document.getElementById('nieuweCartBtn');
     if (nieuweBtn) nieuweBtn.onclick = () => openModal();
-    
-    const opslaanBtn = document.getElementById('modalOpslaanBtn');
+
+    let opslaanBtn = document.getElementById('modalOpslaanBtn');
     if (opslaanBtn) opslaanBtn.onclick = opslaanUitModal;
-    
-    const annulerenBtn = document.getElementById('modalAnnulerenBtn');
+
+    let annulerenBtn = document.getElementById('modalAnnulerenBtn');
     if (annulerenBtn) annulerenBtn.onclick = sluitModal;
-    
+
     window.onclick = (event) => {
-        const modal = document.getElementById('cartModal');
+        let modal = document.getElementById('cartModal');
         if (event.target === modal) sluitModal();
     };
 }
@@ -524,12 +641,12 @@ window.addEventListener('DOMContentLoaded', async () => {
     await vulCartSelector();
     createTrack();
     haalData();
-    maakGrafiek();
+    initGrafiek();
     initConfigPagina();
-    
+
     setInterval(haalData, 1000);
-    
-    const selector = document.getElementById('cartSelector');
+
+    let selector = document.getElementById('cartSelector');
     if (selector) {
         selector.addEventListener('change', (e) => {
             if (e.target.value) {

@@ -1,26 +1,26 @@
-const crypto = require('crypto');
+let crypto = require('crypto');
 global.crypto = crypto;
 
 console.log("🚀 Start API-BE op poort 8080");
 
-const express = require('express');
-const mongoose = require('mongoose');
-const app = express();
+let express = require('express');
+let mongoose = require('mongoose');
+let app = express();
 
 app.use(express.json());
 
 // ===== 1. Schema voor sensor metingen =====
-const SensorSchema = new mongoose.Schema({
+let SensorSchema = new mongoose.Schema({
   id: Number,
   type: String,
   waarde: Number,
   tijd: { type: Date, default: Date.now }
 });
 
-const Meting = mongoose.model('Meting', SensorSchema);
+let Meting = mongoose.model('Meting', SensorSchema);
 
 // ===== 2. Schema voor cart configuratie =====
-const CartConfigSchema = new mongoose.Schema({
+let CartConfigSchema = new mongoose.Schema({
   cartId: { type: Number, unique: true, required: true },
   name: { type: String, default: "Carrier" },
   espIds: [Number],
@@ -30,14 +30,14 @@ const CartConfigSchema = new mongoose.Schema({
   active: { type: Boolean, default: true }
 });
 
-const CartConfig = mongoose.model('CartConfig', CartConfigSchema);
+let CartConfig = mongoose.model('CartConfig', CartConfigSchema);
 
 // ===== 3. Routes =====
 
 app.post('/data', async (req, res) => {
   console.log("📥 Nieuwe data binnen:", req.body);
   try {
-    const nieuweMeting = new Meting(req.body);
+    let nieuweMeting = new Meting(req.body);
     await nieuweMeting.save();
     console.log("✅ Opgeslagen in database");
     res.send("OK");
@@ -49,13 +49,13 @@ app.post('/data', async (req, res) => {
 
 app.get('/data', async (req, res) => {
   console.log("📤 Data opgevraagd");
-  const metingen = await Meting.find().sort({ tijd: -1 }).limit(20);
+  let metingen = await Meting.find().sort({ tijd: -1 }).limit(20);
   res.json(metingen);
 });
 
 app.get('/config/carts', async (req, res) => {
   try {
-    const configs = await CartConfig.find();
+    let configs = await CartConfig.find();
     res.json({ success: true, data: configs });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -64,7 +64,7 @@ app.get('/config/carts', async (req, res) => {
 
 app.get('/config/carts/:cartId', async (req, res) => {
   try {
-    const config = await CartConfig.findOne({ cartId: parseInt(req.params.cartId) });
+    let config = await CartConfig.findOne({ cartId: parseInt(req.params.cartId) });
     if (!config) {
       return res.status(404).json({ success: false, error: "Cart not found" });
     }
@@ -76,38 +76,64 @@ app.get('/config/carts/:cartId', async (req, res) => {
 
 app.put('/config/carts/:cartId', async (req, res) => {
   try {
-    const cartId = parseInt(req.params.cartId);
-    const { espIds, name, locationSensor, colorSensor, colorThresholds, active } = req.body;
-    
-    const updateData = {};
+    let cartId = parseInt(req.params.cartId);
+    let { espIds, name, locationSensor, colorSensor, colorThresholds, active } = req.body;
+
+    let updateData = {};
     if (espIds !== undefined) updateData.espIds = espIds;
     if (name !== undefined) updateData.name = name;
     if (locationSensor !== undefined) updateData.locationSensor = locationSensor;
     if (colorSensor !== undefined) updateData.colorSensor = colorSensor;
     if (colorThresholds !== undefined) updateData.colorThresholds = colorThresholds;
     if (active !== undefined) updateData.active = active;
-    
-    const config = await CartConfig.findOneAndUpdate(
+
+    let config = await CartConfig.findOneAndUpdate(
       { cartId: cartId },
       { $set: updateData },
       { upsert: true, new: true }
     );
-    
+
     res.json({ success: true, data: config });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
 });
 
+// GET /sensor-data/:espId/:sensorType - haal laatste 20 metingen van specifieke sensor
+app.get('/sensor-data/:espId/:sensorType', async (req, res) => {
+  try {
+    let espId = parseInt(req.params.espId);
+    let sensorType = req.params.sensorType;
+
+    let metingen = await Meting.find({
+      id: espId,
+      type: sensorType
+    })
+      .sort({ tijd: -1 })  // Nieuwste eerst
+      .limit(20);          // Laatste 20 metingen
+
+    // Draai om zodat de grafiek van oud naar nieuw gaat
+    metingen.reverse();
+
+    res.json({
+      success: true,
+      data: metingen
+    });
+  } catch (err) {
+    console.error("❌ Sensor data error:", err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 app.delete('/config/carts/:cartId', async (req, res) => {
   try {
-    const cartId = parseInt(req.params.cartId);
-    const result = await CartConfig.deleteOne({ cartId: cartId });
-    
+    let cartId = parseInt(req.params.cartId);
+    let result = await CartConfig.deleteOne({ cartId: cartId });
+
     if (result.deletedCount === 0) {
       return res.status(404).json({ success: false, error: "Cart not found" });
     }
-    
+
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
@@ -116,15 +142,15 @@ app.delete('/config/carts/:cartId', async (req, res) => {
 
 app.get('/grouped-data', async (req, res) => {
   try {
-    const [configs, metingen] = await Promise.all([
+    let [configs, metingen] = await Promise.all([
       CartConfig.find({ active: true }),
       Meting.find().sort({ tijd: -1 }).limit(100)
     ]);
 
-    const result = {};
+    let result = {};
 
-    for (const config of configs) {
-      const cartData = {
+    for (let config of configs) {
+      let cartData = {
         cartId: config.cartId,
         name: config.name,
         latestValues: {},
@@ -133,9 +159,9 @@ app.get('/grouped-data', async (req, res) => {
         timestamp: null
       };
 
-      const cartMetingen = metingen.filter(m => config.espIds.includes(m.id));
+      let cartMetingen = metingen.filter(m => config.espIds.includes(m.id));
 
-      for (const m of cartMetingen) {
+      for (let m of cartMetingen) {
         cartData.latestValues[m.type] = m.waarde;
         cartData.timestamp = m.tijd;
       }
